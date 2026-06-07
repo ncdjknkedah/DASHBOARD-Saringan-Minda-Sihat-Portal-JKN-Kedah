@@ -917,7 +917,7 @@
 
     function isModeratePlus(level) {
       const s = String(level).toLowerCase();
-      return s.includes("moderat") || s.includes("teruk") || s.includes("severe") || s.includes("sederhana") || s.includes("berisiko");
+      return s.includes("moderat") || s.includes("teruk") || s.includes("severe") || s.includes("sederhana") || s.includes("kecemasan");
     }
 
     function escapeHtml(s) {
@@ -1008,26 +1008,29 @@
         if (l.includes("minimum") || l.includes("normal")) cls = "badge-min";
         else if (l.includes("ringan") || l.includes("mild")) cls = "badge-mild";
         else if (l.includes("sederhana") || l.includes("moderat")) cls = "badge-mod";
+        else if (l.includes("kecemasan")) cls = "badge-sev";
         else if (l.includes("teruk") || l.includes("severe")) cls = "badge-sev";
       }
 
       return '<span class="badge ' + cls + '">' + escapeHtml(t) + "</span>";
     }
 
-    const SEVERITY_KEYS = ["normal", "ringan", "sederhana", "teruk", "sangat teruk"];
+    const SEVERITY_KEYS = ["normal", "ringan", "sederhana", "teruk", "sangat teruk", "kecemasan"];
     const SEVERITY_DISPLAY = {
       normal: "Normal",
       ringan: "Ringan",
       sederhana: "Sederhana",
       teruk: "Teruk",
-      "sangat teruk": "Sangat Teruk"
+      "sangat teruk": "Sangat Teruk",
+      kecemasan: "Berisiko Kecemasan"
     };
     const SEVERITY_COLORS = {
       normal: "#34d399",
       ringan: "#fbbf24",
       sederhana: "#fb923c",
       teruk: "#f87171",
-      "sangat teruk": "#dc2626"
+      "sangat teruk": "#dc2626",
+      kecemasan: "#7f1d1d"
     };
 
     function getTotal(dataset) {
@@ -1038,8 +1041,8 @@
       const s = String(level).trim();
       if (!s || s === "-") return "normal";
       const lower = s.toLowerCase();
+      if (/kecemasan/i.test(lower)) return "kecemasan";
       if (/sangat\s*teruk|very\s*severe/i.test(lower)) return "sangat teruk";
-      if (/kecemasan|berisiko/i.test(lower)) return "sangat teruk";
       if (/^teruk$/i.test(lower) || (/severe/i.test(lower) && !/sangat|very/i.test(lower))) return "teruk";
       if (/sederhana|moderat/i.test(lower)) return "sederhana";
       if (/ringan|mild/i.test(lower)) return "ringan";
