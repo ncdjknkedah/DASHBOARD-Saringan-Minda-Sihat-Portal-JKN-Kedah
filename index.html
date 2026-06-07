@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Saringan Kesihatan Mental</title>
+  <title>Dashboard Saringan Kesihatan Mental (Portal JKN Kedah)</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
@@ -563,8 +563,8 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        Minda Sihat KDH
-        <small>JKN Kedah</small>
+        Saringan Minda Sihat
+        <small>Portal JKN Kedah</small>
       </div>
       <button class="btn-icon" id="btnCloseSidebar" title="Tutup menu" aria-label="Tutup menu">✕</button>
     </div>
@@ -601,7 +601,7 @@
         <header>
           <div>
             <h1>Dashboard Saringan Kesihatan Mental</h1>
-            <p class="subtitle">Paparan agregat daripada Google Sheets (Whooley, GAD-2, PHQ-9, GAD-7)</p>
+            <p class="subtitle">Paparan Analisa Whooley, GAD-2, PHQ-9, GAD-7</p>
           </div>
           <div class="actions">
             <span class="status-pill">
@@ -618,14 +618,14 @@
           <div class="card"><div class="card-label">Jumlah Rekod</div><div class="card-value c-total" id="statTotal">-</div></div>
           <div class="card"><div class="card-label">Risiko Whooley</div><div class="card-value c-risk" id="statWhooley">-</div><div class="card-sub" id="statWhooleyPct"></div></div>
           <div class="card"><div class="card-label">Risiko GAD-2</div><div class="card-value c-warn" id="statGad2">-</div><div class="card-sub" id="statGad2Pct"></div></div>
-          <div class="card"><div class="card-label">PHQ-9 ≥ Moderat</div><div class="card-value c-purple" id="statPhq9Mod">-</div><div class="card-sub" id="statPhq9Avg"></div></div>
-          <div class="card"><div class="card-label">GAD-7 ≥ Moderat</div><div class="card-value c-risk" id="statGad7Mod">-</div><div class="card-sub" id="statGad7Avg"></div></div>
+          <div class="card"><div class="card-label">PHQ-9 ≥ Sederhana</div><div class="card-value c-purple" id="statPhq9Mod">-</div><div class="card-sub" id="statPhq9Avg"></div></div>
+          <div class="card"><div class="card-label">GAD-7 ≥ Sederhana</div><div class="card-value c-risk" id="statGad7Mod">-</div><div class="card-sub" id="statGad7Avg"></div></div>
           <div class="card"><div class="card-label">Kemaskini Terakhir</div><div class="card-value sm c-ok" id="statUpdated">-</div></div>
         </section>
 
         <section class="grid-2">
           <div class="panel">
-            <h2>Rekod Mengikut Jantina</h2>
+            <h2>Jantina</h2>
             <div class="chart-box bar-chart"><canvas id="chartGender"></canvas></div>
           </div>
           <div class="panel">
@@ -888,3 +888,413 @@
           showAlert("<strong>Fungsi <code>doGet</code> belum ditambah dalam Google Apps Script.</strong> Sila tambah dan deploy semula Web App anda.");
         } else {
           showAlert("<strong>Ralat:</strong> " + escapeHtml(msg));
+        }
+      } finally {
+        $("btnRefresh").disabled = false;
+        $("statUpdated").textContent = new Date().toLocaleString("ms-MY");
+      }
+    }
+
+    function rowToObject(row) {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? "-"; });
+      return obj;
+    }
+
+    function val(row, key) {
+      return String(row[COL[key]] ?? "-").trim();
+    }
+
+    function numScore(v) {
+      const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
+      return isNaN(n) ? null : n;
+    }
+
+    function pct(part, total) {
+      if (!total) return "0%";
+      return ((part / total) * 100).toFixed(1) + "%";
+    }
+
+    function isModeratePlus(level) {
+      const s = String(level).toLowerCase();
+      return s.includes("moderat") || s.includes("teruk") || s.includes("severe") || s.includes("sederhana") || s.includes("berisiko");
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function countBy(rows, key) {
+      const map = {};
+      rows.forEach((r) => {
+        const k = val(r, key) || "-";
+        map[k] = (map[k] || 0) + 1;
+      });
+      return map;
+    }
+
+    const AGE_GROUP_KEYS = ["u18", "18-30", "31-40", "41-59", "60plus"];
+    const AGE_GROUP_LABELS = {
+      u18: "<18 tahun",
+      "18-30": "18-30 tahun",
+      "31-40": "31-40 tahun",
+      "41-59": "41-59 tahun",
+      "60plus": "+60 tahun"
+    };
+    const AGE_GROUP_COLORS = ["#38bdf8", "#34d399", "#fbbf24", "#fb923c", "#f87171"];
+
+    function getAgeGroup(umurStr) {
+      const age = parseInt(String(umurStr).replace(/[^0-9]/g, ""), 10);
+      if (isNaN(age)) return null;
+      if (age < 18) return "u18";
+      if (age <= 30) return "18-30";
+      if (age <= 40) return "31-40";
+      if (age <= 59) return "41-59";
+      return "60plus";
+    }
+
+    function buildAgeBarData(rows) {
+      const counts = {};
+      AGE_GROUP_KEYS.forEach((k) => { counts[k] = 0; });
+      rows.forEach((r) => {
+        const group = getAgeGroup(val(r, "umur"));
+        if (group) counts[group]++;
+      });
+      return {
+        labels: AGE_GROUP_KEYS.map((k) => AGE_GROUP_LABELS[k]),
+        data: AGE_GROUP_KEYS.map((k) => counts[k]),
+        colors: AGE_GROUP_COLORS
+      };
+    }
+
+    function normalizeGender(g) {
+      const s = String(g).trim().toLowerCase();
+      if (/lelaki|laki-laki|^l$|male/i.test(s)) return "Lelaki";
+      if (/perempuan|wanita|^p$|female/i.test(s)) return "Perempuan";
+      return null;
+    }
+
+    function buildGenderBarData(rows) {
+      const counts = { Lelaki: 0, Perempuan: 0 };
+      rows.forEach((r) => {
+        const g = normalizeGender(val(r, "jantina"));
+        if (g) counts[g]++;
+      });
+      return {
+        labels: ["Lelaki", "Perempuan"],
+        data: [counts.Lelaki, counts.Perempuan],
+        colors: ["#38bdf8", "#f472b6"]
+      };
+    }
+
+    function avgScore(rows, key) {
+      const scores = rows.map((r) => numScore(val(r, key))).filter((n) => n !== null);
+      if (!scores.length) return "-";
+      return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+    }
+
+    function badgeRisk(text, type) {
+      const t = String(text);
+      let cls = "badge-min";
+      if (/berisiko/i.test(t) && !/tidak/i.test(t)) cls = "badge-risk";
+      else if (/tidak/i.test(t)) cls = "badge-ok";
+
+      if (type === "phq" || type === "gad") {
+        const l = t.toLowerCase();
+        if (l.includes("minimum") || l.includes("normal")) cls = "badge-min";
+        else if (l.includes("ringan") || l.includes("mild")) cls = "badge-mild";
+        else if (l.includes("sederhana") || l.includes("moderat")) cls = "badge-mod";
+        else if (l.includes("teruk") || l.includes("severe")) cls = "badge-sev";
+      }
+
+      return '<span class="badge ' + cls + '">' + escapeHtml(t) + "</span>";
+    }
+
+    const SEVERITY_KEYS = ["normal", "ringan", "sederhana", "teruk", "sangat teruk"];
+    const SEVERITY_DISPLAY = {
+      normal: "Normal",
+      ringan: "Ringan",
+      sederhana: "Sederhana",
+      teruk: "Teruk",
+      "sangat teruk": "Sangat Teruk"
+    };
+    const SEVERITY_COLORS = {
+      normal: "#34d399",
+      ringan: "#fbbf24",
+      sederhana: "#fb923c",
+      teruk: "#f87171",
+      "sangat teruk": "#dc2626"
+    };
+
+    function getTotal(dataset) {
+      return dataset.data.reduce((a, b) => a + b, 0);
+    }
+
+    function normalizeSeverity(level) {
+      const s = String(level).trim();
+      if (!s || s === "-") return "normal";
+      const lower = s.toLowerCase();
+      if (/sangat\s*teruk|very\s*severe/i.test(lower)) return "sangat teruk";
+      if (/kecemasan|berisiko/i.test(lower)) return "sangat teruk";
+      if (/^teruk$/i.test(lower) || (/severe/i.test(lower) && !/sangat|very/i.test(lower))) return "teruk";
+      if (/sederhana|moderat/i.test(lower)) return "sederhana";
+      if (/ringan|mild/i.test(lower)) return "ringan";
+      if (/normal|minimum/i.test(lower)) return "normal";
+      return null;
+    }
+
+    function buildSeverityBarData(map) {
+      const counts = {};
+      SEVERITY_KEYS.forEach((k) => { counts[k] = 0; });
+
+      Object.entries(map).forEach(([rawLabel, count]) => {
+        const key = normalizeSeverity(rawLabel);
+        if (key && counts.hasOwnProperty(key)) {
+          counts[key] += count;
+        }
+      });
+
+      return {
+        labels: SEVERITY_KEYS.map((k) => SEVERITY_DISPLAY[k]),
+        data: SEVERITY_KEYS.map((k) => counts[k]),
+        colors: SEVERITY_KEYS.map((k) => SEVERITY_COLORS[k])
+      };
+    }
+
+    function barLabelFormatter(value, ctx) {
+      const total = getTotal(ctx.dataset);
+      const p = total ? ((value / total) * 100).toFixed(1) : "0.0";
+      return "n: " + value + "\n" + p + "%";
+    }
+
+    function buildBarDatalabels() {
+      return {
+        display: true,
+        formatter: barLabelFormatter,
+        color(ctx) {
+          const value = ctx.dataset.data[ctx.dataIndex];
+          const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex];
+          if (!value || !bar || bar.height < 22) return "#e2e8f0";
+          return "#ffffff";
+        },
+        anchor(ctx) {
+          const value = ctx.dataset.data[ctx.dataIndex];
+          const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex];
+          if (!value || !bar || bar.height < 22) return "end";
+          return "center";
+        },
+        align(ctx) {
+          const value = ctx.dataset.data[ctx.dataIndex];
+          const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex];
+          if (!value) return "bottom";
+          if (!bar || bar.height < 22) return "top";
+          return "center";
+        },
+        offset: 2,
+        clip: true,
+        font: { weight: "700", size: 10, lineHeight: 1.3 },
+        textAlign: "center",
+        textStrokeColor: "rgba(0, 0, 0, 0.35)",
+        textStrokeWidth: 1
+      };
+    }
+
+    function renderSummary(rows) {
+      const total = rows.length;
+      const whooleyRisk = rows.filter((r) => /^berisiko$/i.test(val(r, "whooley"))).length;
+      const gad2Risk = rows.filter((r) => /^berisiko$/i.test(val(r, "gad2"))).length;
+      const phq9Mod = rows.filter((r) => isModeratePlus(val(r, "phq9Level"))).length;
+      const gad7Mod = rows.filter((r) => isModeratePlus(val(r, "gad7Level"))).length;
+
+      $("statTotal").textContent = total;
+      $("statWhooley").textContent = whooleyRisk;
+      $("statWhooleyPct").textContent = pct(whooleyRisk, total) + " daripada jumlah";
+      $("statGad2").textContent = gad2Risk;
+      $("statGad2Pct").textContent = pct(gad2Risk, total) + " daripada jumlah";
+      $("statPhq9Mod").textContent = phq9Mod;
+      $("statPhq9Avg").textContent = "Purata skor: " + avgScore(rows, "phq9Score");
+      $("statGad7Mod").textContent = gad7Mod;
+      $("statGad7Avg").textContent = "Purata skor: " + avgScore(rows, "gad7Score");
+    }
+
+    function destroyChart(id) {
+      if (charts[id]) {
+        charts[id].destroy();
+        delete charts[id];
+      }
+    }
+
+    function makeBarChart(id, labels, data, colors) {
+      destroyChart(id);
+      const ctx = $(id).getContext("2d");
+      const maxVal = Math.max(...data, 0);
+
+      charts[id] = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: colors,
+            borderColor: colors.map((c) => c),
+            borderWidth: 1,
+            borderRadius: 8,
+            maxBarThickness: 64
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { top: 4, right: 8, bottom: 4, left: 8 } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.95)",
+              titleColor: "#f8fafc",
+              bodyColor: "#e2e8f0",
+              borderColor: "#475569",
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label(ctx) {
+                  const value = ctx.raw;
+                  const total = getTotal(ctx.dataset);
+                  const p = total ? ((value / total) * 100).toFixed(1) : "0.0";
+                  return "n: " + value + " (" + p + "%)";
+                }
+              }
+            },
+            datalabels: buildBarDatalabels()
+          },
+          scales: {
+            x: {
+              ticks: { color: "#e2e8f0", font: { weight: "600", size: 11 }, maxRotation: 45, minRotation: 0, autoSkip: false },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              suggestedMax: maxVal > 0 ? Math.ceil(maxVal * 1.15) : 5,
+              ticks: { color: "#94a3b8", precision: 0 },
+              grid: { color: "rgba(148,163,184,0.12)" }
+            }
+          }
+        }
+      });
+    }
+
+    function renderCharts(rows) {
+      const genderBar = buildGenderBarData(rows);
+      const ageBar = buildAgeBarData(rows);
+      const phq9Bar = buildSeverityBarData(countBy(rows, "phq9Level"));
+      const gad7Bar = buildSeverityBarData(countBy(rows, "gad7Level"));
+
+      const whooleyRisk = rows.filter((r) => /^berisiko$/i.test(val(r, "whooley"))).length;
+      const gad2Risk = rows.filter((r) => /^berisiko$/i.test(val(r, "gad2"))).length;
+
+      makeBarChart("chartGender", genderBar.labels, genderBar.data, genderBar.colors);
+      makeBarChart("chartAge", ageBar.labels, ageBar.data, ageBar.colors);
+      makeBarChart(
+        "chartRisk",
+        ["Whooley Berisiko", "GAD-2 Berisiko"],
+        [whooleyRisk, gad2Risk],
+        ["#f87171", "#fbbf24"]
+      );
+      makeBarChart("chartPhq9", phq9Bar.labels, phq9Bar.data, phq9Bar.colors);
+      makeBarChart("chartGad7", gad7Bar.labels, gad7Bar.data, gad7Bar.colors);
+    }
+
+    function renderDashboard() {
+      renderSummary(rawRows);
+      renderCharts(rawRows);
+    }
+
+    function populateFilters() {
+      const phqLevels = [...new Set(rawRows.map((r) => val(r, "phq9Level")).filter((v) => v && v !== "-"))].sort();
+      const gadLevels = [...new Set(rawRows.map((r) => val(r, "gad7Level")).filter((v) => v && v !== "-"))].sort();
+
+      const phqSel = $("filterPhq9");
+      const gadSel = $("filterGad7");
+      const curPhq = phqSel.value;
+      const curGad = gadSel.value;
+
+      phqSel.innerHTML = '<option value="">Semua Tahap PHQ-9</option>' +
+        phqLevels.map((l) => '<option value="' + escapeHtml(l) + '">' + escapeHtml(l) + "</option>").join("");
+      gadSel.innerHTML = '<option value="">Semua Tahap GAD-7</option>' +
+        gadLevels.map((l) => '<option value="' + escapeHtml(l) + '">' + escapeHtml(l) + "</option>").join("");
+
+      phqSel.value = curPhq;
+      gadSel.value = curGad;
+    }
+
+    function getFilteredRows() {
+      const q = $("searchInput").value.trim().toLowerCase();
+      const fP = $("filterPhq9").value;
+      const fG = $("filterGad7").value;
+
+      return rawRows.filter((r) => {
+        if (fP && val(r, "phq9Level") !== fP) return false;
+        if (fG && val(r, "gad7Level") !== fG) return false;
+        if (!q) return true;
+
+        const hay = [
+          val(r, "nama"), val(r, "ic"), val(r, "jantina"),
+          val(r, "umur"), val(r, "whooley"), val(r, "gad2"),
+          val(r, "phq9Level"), val(r, "gad7Level")
+        ].join(" ").toLowerCase();
+
+        return hay.includes(q);
+      });
+    }
+
+    function renderSettingsTable() {
+      if (!isAuthenticated()) return;
+
+      const rows = getFilteredRows();
+      const displayHeaders = [
+        COL.tarikh, COL.nama, COL.ic, COL.umur, COL.jantina,
+        COL.whooley, COL.gad2, COL.phq9Score, COL.phq9Level,
+        COL.gad7Score, COL.gad7Level
+      ];
+
+      $("tableHead").innerHTML = "<tr>" + displayHeaders.map((h) => "<th>" + escapeHtml(h) + "</th>").join("") + "</tr>";
+      $("recordCount").textContent = rows.length + " rekod dipaparkan daripada " + rawRows.length + " jumlah";
+
+      if (!rows.length) {
+        $("tableBody").innerHTML = "";
+        $("emptyState").style.display = "block";
+        return;
+      }
+
+      $("emptyState").style.display = "none";
+      $("tableBody").innerHTML = rows.map((r) =>
+        "<tr>" +
+        "<td>" + escapeHtml(val(r, "tarikh")) + "</td>" +
+        "<td><strong>" + escapeHtml(val(r, "nama")) + "</strong></td>" +
+        "<td>" + escapeHtml(val(r, "ic")) + "</td>" +
+        "<td>" + escapeHtml(val(r, "umur")) + "</td>" +
+        "<td>" + escapeHtml(val(r, "jantina")) + "</td>" +
+        "<td>" + badgeRisk(val(r, "whooley")) + "</td>" +
+        "<td>" + badgeRisk(val(r, "gad2")) + "</td>" +
+        "<td>" + escapeHtml(val(r, "phq9Score")) + "</td>" +
+        "<td>" + badgeRisk(val(r, "phq9Level"), "phq") + "</td>" +
+        "<td>" + escapeHtml(val(r, "gad7Score")) + "</td>" +
+        "<td>" + badgeRisk(val(r, "gad7Level"), "gad") + "</td>" +
+        "</tr>"
+      ).join("");
+    }
+
+    ["searchInput", "filterPhq9", "filterGad7"].forEach((id) => {
+      $(id).addEventListener("input", renderSettingsTable);
+      $(id).addEventListener("change", renderSettingsTable);
+    });
+
+    $("btnRefresh").addEventListener("click", fetchData);
+    fetchData();
+    switchView("dashboard");
+  </script>
+</body>
+</html>
