@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Saringan Kesihatan Mental (Portal JKN Kedah)</title>
+  <title>Dashboard Saringan Kesihatan Mental</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
@@ -563,7 +563,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        Saringan Minda Sihat
+        Analisa Saringan Minda Sihat 
         <small>Portal JKN Kedah</small>
       </div>
       <button class="btn-icon" id="btnCloseSidebar" title="Tutup menu" aria-label="Tutup menu">✕</button>
@@ -600,7 +600,7 @@
       <div class="wrap">
         <header>
           <div>
-            <h1>Dashboard Saringan Kesihatan Mental</h1>
+            <h1>Dashboard Saringan Kesihatan Mental Portal JKN Kedah</h1>
             <p class="subtitle">Paparan Analisa Whooley, GAD-2, PHQ-9, GAD-7</p>
           </div>
           <div class="actions">
@@ -618,14 +618,14 @@
           <div class="card"><div class="card-label">Jumlah Rekod</div><div class="card-value c-total" id="statTotal">-</div></div>
           <div class="card"><div class="card-label">Risiko Whooley</div><div class="card-value c-risk" id="statWhooley">-</div><div class="card-sub" id="statWhooleyPct"></div></div>
           <div class="card"><div class="card-label">Risiko GAD-2</div><div class="card-value c-warn" id="statGad2">-</div><div class="card-sub" id="statGad2Pct"></div></div>
-          <div class="card"><div class="card-label">PHQ-9 ≥ Sederhana</div><div class="card-value c-purple" id="statPhq9Mod">-</div><div class="card-sub" id="statPhq9Avg"></div></div>
-          <div class="card"><div class="card-label">GAD-7 ≥ Sederhana</div><div class="card-value c-risk" id="statGad7Mod">-</div><div class="card-sub" id="statGad7Avg"></div></div>
+          <div class="card"><div class="card-label">PHQ-9 ≥ Moderat</div><div class="card-value c-purple" id="statPhq9Mod">-</div><div class="card-sub" id="statPhq9Avg"></div></div>
+          <div class="card"><div class="card-label">GAD-7 ≥ Moderat</div><div class="card-value c-risk" id="statGad7Mod">-</div><div class="card-sub" id="statGad7Avg"></div></div>
           <div class="card"><div class="card-label">Kemaskini Terakhir</div><div class="card-value sm c-ok" id="statUpdated">-</div></div>
         </section>
 
         <section class="grid-2">
           <div class="panel">
-            <h2>Jantina</h2>
+            <h2>Rekod Mengikut Jantina</h2>
             <div class="chart-box bar-chart"><canvas id="chartGender"></canvas></div>
           </div>
           <div class="panel">
